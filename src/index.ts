@@ -25,7 +25,7 @@ export interface Config {}
 
 export const Config: Schema<Config> = Schema.object({})
 
-export default class Scoreboard extends Service {
+export class Scoreboard extends Service {
   static inject = ["database"]
   constructor(ctx: Context, config: Config) {
     super(ctx, "scoreboard", true)
@@ -47,20 +47,12 @@ export default class Scoreboard extends Service {
   }
 
   async remove(guildId: string, groupName: string, userId: string) {
-    if (this.get(guildId, groupName, userId) !== undefined) {
-      await this.ctx.database.remove("scoreboardData", {groupName, guildId, playerId: userId})
-      return true
-    }
-    return false
+    return (await this.ctx.database.remove("scoreboardData", {groupName, guildId, playerId: userId})).matched === 0 ? false : true
 
   }
 
   async clear(groupName: string, guildId?: string) {
-    if (this.get(guildId, groupName) !== undefined) {
-      await this.ctx.database.remove("scoreboardData", {groupName, guildId})
-      return true
-    }
-    return false
+    return (await this.ctx.database.remove("scoreboardData", {groupName, guildId})).matched === 0 ? false : true
   }
 
   async getBySort(guildId: string, groupName: string, limit = 100, offset = 0, reversed = false) {
@@ -76,11 +68,12 @@ export default class Scoreboard extends Service {
 }
 
 export function apply(ctx: Context) {
+  ctx.plugin(Scoreboard)
   extendTable(ctx)
 }
 
 function extendTable(ctx: Context) {
-  ctx.database.extend("scoreboardData", {
+  ctx.model.extend("scoreboardData", {
     id: "unsigned",
     guildId: "text",
     playerId: "text",
